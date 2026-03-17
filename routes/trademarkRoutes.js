@@ -5,13 +5,19 @@ import {
     getTrademarkById, 
     createTrademark, 
     updateTrademark, 
-    deleteTrademark 
+    deleteTrademark,
+    checkTrademark,
+    getStats,
+    getHealth
 } from '../controllers/trademarkController.js';
 import { verifyToken, verifyAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Public routes
+router.get('/check', checkTrademark);
+router.get('/stats', getStats);
+router.get('/health', getHealth);
 router.get('/search', searchTrademarks);
 router.get('/', getAllTrademarks);
 router.get('/:id', getTrademarkById);

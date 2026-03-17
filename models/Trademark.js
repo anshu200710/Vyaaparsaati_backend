@@ -13,22 +13,33 @@ const trademarkSchema = new mongoose.Schema({
     },
     owner: {
         type: String,
-        required: true
+        default: ''
     },
     class: {
-        type: Number,
-        required: true
+        type: String,
+        default: ''
     },
     status: {
         type: String,
-        required: true
+        default: ''
     },
     filed_date: {
-        type: Date,
-        required: true
+        type: String,
+        default: ''
+    },
+    source_query: {
+        type: String,
+        default: ''
     }
 }, {
     timestamps: true
 });
+
+// Full-text index on brand_name for fast searches
+trademarkSchema.index({ brand_name: 'text' });
+
+// Regular indexes for class + status filters
+trademarkSchema.index({ class: 1 });
+trademarkSchema.index({ status: 1 });
 
 export default mongoose.model('Trademark', trademarkSchema);

@@ -179,3 +179,91 @@ export const deleteTrademark = async (req, res) => {
         });
     }
 };
+
+// Check trademark availability with advanced search
+export const checkTrademark = async (req, res) => {
+    const { name, class: tmClass } = req.query;
+
+    if (!name || name.trim().length < 2) {
+        return res.status(400).json({ error: 'Provide at least 2 characters in "name".' });
+    }
+
+    const query = name.trim();
+
+    try {
+        // Build shared filter
+        const classFilter = tmClass ? { class: tmClass } : {};
+
+        // 1. Full-text search
+        const textResults = await Trademark.find(
+            { $text: { $search: query }, ...classFilter },
+            { score: { $meta: 'textScore' } }
+        )
+            .sort({ score: { $meta: 'textScore' } })
+            .limit(50)
+            .lean();
+
+        // 2. Regex search (case-insensitive)
+        const regexResults = await Trademark.find({
+            brand_name: { $regex: query, $options: 'i' },
+            ...classFilter,
+        })
+            .limit(50)
+            .lean();
+
+        // Merge & de-duplicate
+        const seen = new Set();
+        const merged = [];
+
+        for (const r of [...textResults, ...regexResults]) {
+            if (!seen.has(r.application_number)) {
+                seen.add(r.application_number);
+                merged.push(r);
+            }
+        }
+
+        // Exact match check
+        const exactMatches = merged.filter(
+            r => r.brand_name.toLowerCase() === query.toLowerCase()
+        );
+
+        const available = merged.length === 0;
+        const hasExact = exactMatches.length > 0;
+
+        // Clean up mongoose _id fields for the response
+        const results = merged.slice(0, 20).map(({ _id, __v, score, ...rest }) => rest);
+
+        return res.json({
+            query,
+            available,
+            has_exact_match: hasExact,
+            count: merged.length,
+            results,
+        });
+
+    } catch (err) {
+        console.error('[ERROR] /api/check:', err.message);
+        return res.status(500).json({ error: 'Database query failed: ' + err.message });
+    }
+};
+
+// Get trademark statistics
+export const getStats = async (req, res) => {
+    try {
+        const total = await Trademark.countDocuments();
+        const statuses = await Trademark.aggregate([
+            { $group: { _id: '$status', count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 },
+        ]);
+
+        return res.json({ total_trademarks: total, by_status: statuses });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+};
+
+// Health check endpoint
+export const getHealth = (req, res) => {
+    res.json({ ok: true });
+};

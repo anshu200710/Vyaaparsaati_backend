@@ -5,6 +5,7 @@ import connectDB from './config/db.js';
 import trademarkRoutes from './routes/trademarkRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import { checkTrademark, getStats, getHealth } from './controllers/trademarkController.js';
 
 dotenv.config();
 
@@ -17,15 +18,20 @@ app.use(express.json());
 // Connect to MongoDB
 connectDB();
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/trademarks', trademarkRoutes);
-
 // Health check endpoint
 app.get('/', (req, res) => {
     res.json({ message: 'Trademark Search API is running' });
 });
+
+// Main API routes
+app.get('/api/health', getHealth);
+app.get('/api/check', checkTrademark);
+app.get('/api/stats', getStats);
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/trademarks', trademarkRoutes);
 
 const PORT = process.env.PORT || 5000;
 
