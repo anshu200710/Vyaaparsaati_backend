@@ -20,6 +20,9 @@ export const verifyToken = (req, res, next) => {
     }
 };
 
+// Alias for verifyToken
+export const authenticate = verifyToken;
+
 // Middleware to check if user is admin
 export const verifyAdmin = (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];

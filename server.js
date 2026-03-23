@@ -5,6 +5,7 @@ import connectDB from './config/db.js';
 import trademarkRoutes from './routes/trademarkRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
 import { checkTrademark, getStats, getHealth } from './controllers/trademarkController.js';
 
 dotenv.config();
@@ -31,6 +32,7 @@ app.get('/api/stats', getStats);
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/profile', profileRoutes);
 app.use('/api/trademarks', trademarkRoutes);
 
 const PORT = process.env.PORT || 5000;
