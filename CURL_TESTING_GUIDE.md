@@ -437,6 +437,370 @@ curl -X DELETE http://localhost:4000/api/profile/documents \
 
 ---
 
+## 🧪 Offers API Endpoints (5)
+
+### 1️⃣ GET All Active Offers
+```bash
+curl -X GET http://localhost:4000/api/offers
+```
+
+### 2️⃣ GET Offer by ID
+```bash
+curl -X GET http://localhost:4000/api/offers/{offerId}
+```
+
+### 3️⃣ CREATE Offer (admin)
+```bash
+curl -X POST http://localhost:4000/api/offers \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -F "bannerImage=@/path/to/banner.jpg" \
+  -F "title=Super Savings" \
+  -F "description=Get 20% off on all items"
+```
+
+### 4️⃣ UPDATE Offer (admin)
+```bash
+curl -X PUT http://localhost:4000/api/offers/{offerId} \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -F "bannerImage=@/path/to/new-banner.jpg" \
+  -F "title=Updated Offer" \
+  -F "description=Updated description" \
+  -F "isActive=true"
+```
+
+### 5️⃣ DELETE Offer (admin)
+```bash
+curl -X DELETE http://localhost:4000/api/offers/{offerId} \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN"
+```
+
+---
+
+## 📰 News & Updates API Endpoints (7)
+
+### 1️⃣6️⃣ GET All Published News
+```bash
+curl -X GET http://localhost:4000/api/news
+```
+
+**Query Parameters:**
+```bash
+# Get with pagination
+curl -X GET "http://localhost:4000/api/news?page=1&limit=10"
+
+# Get specific category
+curl -X GET "http://localhost:4000/api/news?category=technology&page=1"
+```
+
+---
+
+### 1️⃣7️⃣ GET News by ID
+```bash
+curl -X GET http://localhost:4000/api/news/{newsId}
+```
+
+---
+
+### 1️⃣8️⃣ GET News by Category
+```bash
+curl -X GET http://localhost:4000/api/news/category/technology
+
+# Categories: technology, business, updates, announcement, other
+```
+
+**With Pagination:**
+```bash
+curl -X GET "http://localhost:4000/api/news/category/business?page=1&limit=5"
+```
+
+---
+
+### 1️⃣9️⃣ CREATE News (admin)
+```bash
+curl -X POST http://localhost:4000/api/news \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -F "image=@/path/to/news-image.jpg" \
+  -F "title=Major Updates Released" \
+  -F "description=We are excited to announce new features" \
+  -F "category=announcement"
+```
+
+**Windows Example:**
+```bash
+curl -X POST http://localhost:4000/api/news \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -F "image=@C:\Users\user\Desktop\news.jpg" \
+  -F "title=New Feature Launch" \
+  -F "description=Check out our latest innovations" \
+  -F "category=technology"
+```
+
+---
+
+### 2️⃣0️⃣ UPDATE News (admin)
+```bash
+curl -X PUT http://localhost:4000/api/news/{newsId} \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -F "image=@/path/to/new-image.jpg" \
+  -F "title=Updated Title" \
+  -F "description=Updated description" \
+  -F "category=business" \
+  -F "isPublished=true"
+```
+
+**Update without image:**
+```bash
+curl -X PUT http://localhost:4000/api/news/{newsId} \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Updated Title",
+    "description": "Updated description",
+    "category": "updates",
+    "isPublished": true
+  }'
+```
+
+---
+
+### 2️⃣1️⃣ DELETE News (admin)
+```bash
+curl -X DELETE http://localhost:4000/api/news/{newsId} \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN"
+```
+
+---
+
+### 2️⃣2️⃣ GET All News (admin - including unpublished)
+```bash
+curl -X GET http://localhost:4000/api/news/admin/all \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN"
+```
+
+**With filters:**
+```bash
+curl -X GET "http://localhost:4000/api/news/admin/all?category=announcement&page=1&limit=10" \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN"
+```
+
+---
+
+## 💬 Chat & AI Messaging API Endpoints (8)
+
+### 2️⃣3️⃣ START a New Conversation
+```bash
+curl -X POST http://localhost:4000/api/chat/start \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "subject": "Help with my account",
+    "adminId": "ADMIN_USER_ID"
+  }'
+```
+
+**Response:**
+```json
+{
+  "message": "Conversation started successfully",
+  "data": {
+    "_id": "conversation_id",
+    "userId": { "_id": "user_id", "name": "John", "email": "john@example.com" },
+    "adminId": { "_id": "admin_id", "name": "Admin", "email": "admin@example.com" },
+    "subject": "Help with my account",
+    "messages": [],
+    "aiChatEnabled": false,
+    "status": "open",
+    "createdAt": "2024-01-15T10:00:00Z"
+  }
+}
+```
+
+---
+
+### 2️⃣4️⃣ SEND a Message
+```bash
+curl -X POST http://localhost:4000/api/chat/{conversationId}/message \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "I need help with my account verification"
+  }'
+```
+
+**Response:**
+```json
+{
+  "message": "Message sent successfully",
+  "data": {
+    "_id": "conversation_id",
+    "messages": [
+      {
+        "_id": "msg_id",
+        "sender": "user",
+        "senderName": "John Doe",
+        "message": "I need help with my account",
+        "timestamp": "2024-01-15T10:05:00Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 2️⃣5️⃣ GET Conversation History
+```bash
+curl -X GET http://localhost:4000/api/chat/{conversationId} \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "_id": "conversation_id",
+  "userId": { "_id": "user_id", "name": "John", "email": "john@example.com" },
+  "adminId": { "_id": "admin_id", "name": "Admin", "email": "admin@example.com" },
+  "subject": "Help with my account",
+  "messages": [
+    {
+      "_id": "msg_id_1",
+      "sender": "user",
+      "senderName": "John Doe",
+      "message": "I need help",
+      "timestamp": "2024-01-15T10:00:00Z"
+    },
+    {
+      "_id": "msg_id_2",
+      "sender": "admin",
+      "senderName": "Admin",
+      "message": "I'll help you out",
+      "timestamp": "2024-01-15T10:05:00Z"
+    }
+  ],
+  "aiChatEnabled": false,
+  "status": "open"
+}
+```
+
+---
+
+### 2️⃣6️⃣ LIST My Conversations (user or admin)
+```bash
+curl -X GET http://localhost:4000/api/chat \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**With pagination:**
+```bash
+curl -X GET "http://localhost:4000/api/chat?page=1&limit=5" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+### 2️⃣7️⃣ LIST All Conversations (admin only)
+```bash
+curl -X GET http://localhost:4000/api/chat/admin/all \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN"
+```
+
+**With status filter:**
+```bash
+curl -X GET "http://localhost:4000/api/chat/admin/all?status=open&page=1&limit=10" \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN"
+```
+
+---
+
+### 2️⃣8️⃣ ENABLE AI ChatBot (Convert to Chat with AI)
+```bash
+curl -X PUT http://localhost:4000/api/chat/{conversationId}/enable-bot \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "AI chat enabled successfully",
+  "data": {
+    "_id": "conversation_id",
+    "aiChatEnabled": true,
+    "status": "open"
+  }
+}
+```
+
+**Now when you send a message, the AI (Gemini) will auto-reply:**
+```bash
+curl -X POST http://localhost:4000/api/chat/{conversationId}/message \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "What payment methods do you accept?"
+  }'
+```
+
+**Response (with AI response auto-added):**
+```json
+{
+  "message": "Message sent successfully",
+  "data": {
+    "messages": [
+      {
+        "sender": "user",
+        "senderName": "John",
+        "message": "What payment methods do you accept?",
+        "timestamp": "2024-01-15T10:00:00Z"
+      },
+      {
+        "sender": "bot",
+        "senderName": "ChatBot",
+        "message": "We accept all major credit cards, PayPal, bank transfers, and digital wallets...",
+        "timestamp": "2024-01-15T10:00:05Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 2️⃣9️⃣ DISABLE AI ChatBot
+```bash
+curl -X PUT http://localhost:4000/api/chat/{conversationId}/disable-bot \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "AI chat disabled successfully",
+  "data": {
+    "aiChatEnabled": false
+  }
+}
+```
+
+---
+
+### 3️⃣0️⃣ CLOSE Conversation (admin only)
+```bash
+curl -X PUT http://localhost:4000/api/chat/{conversationId}/close \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "Conversation closed successfully",
+  "data": {
+    "status": "closed"
+  }
+}
+```
+
+---
+
 ## 🧪 Complete Testing Workflow
 
 ### Step 1: Setup

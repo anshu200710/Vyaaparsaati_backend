@@ -6,6 +6,9 @@ import trademarkRoutes from './routes/trademarkRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
+import offerRoutes from './routes/offerRoutes.js';
+import newsRoutes from './routes/newsRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
 import { checkTrademark, getStats, getHealth } from './controllers/trademarkController.js';
 
 dotenv.config();
@@ -34,6 +37,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/trademarks', trademarkRoutes);
+app.use('/api/offers', offerRoutes);
+app.use('/api/news', newsRoutes);
+app.use('/api/chat', chatRoutes);
 
 const PORT = process.env.PORT || 5000;
 
