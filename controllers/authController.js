@@ -5,18 +5,30 @@ import jwt from 'jsonwebtoken';
 // Register user
 export const register = async (req, res) => {
     try {
-        const { name, email, password, confirmPassword } = req.body;
+        const { firstName, lastName, email, password, confirmPassword, accountType, phoneNumber, businessName } = req.body;
 
         // Validation
-        if (!name || !email || !password || !confirmPassword) {
+        if (!firstName || !lastName || !email || !password || !confirmPassword || !accountType || !phoneNumber) {
             return res.status(400).json({ 
-                error: 'All fields are required' 
+                success: false,
+                message: 'All fields are required',
+                error: 'Missing required fields'
             });
         }
 
         if (password !== confirmPassword) {
             return res.status(400).json({ 
-                error: 'Passwords do not match' 
+                success: false,
+                message: 'Passwords do not match',
+                error: 'Password mismatch'
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Password must be at least 6 characters',
+                error: 'Weak password'
             });
         }
 
@@ -24,7 +36,9 @@ export const register = async (req, res) => {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ 
-                error: 'Email already registered' 
+                success: false,
+                message: 'Email already registered',
+                error: 'Email exists'
             });
         }
 
@@ -32,35 +46,64 @@ export const register = async (req, res) => {
         const verificationCode = generateVerificationCode();
         const verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-        // Create user with default role 'user'
+        // Create user
         const user = new User({
-            name,
+            firstName,
+            lastName,
             email,
             password,
-            role: 'user', // Default role
+            accountType,
+            phoneNumber,
+            businessName: accountType === 'business' ? businessName : undefined,
+            role: 'user',
+            isEmailVerified: false,
             verificationCode,
             verificationCodeExpiry
         });
 
         await user.save();
 
+        // Generate JWT tokens
+        const accessToken = jwt.sign(
+            { userId: user._id, email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '7d' }
+        );
+
+        const refreshToken = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
+            { expiresIn: '30d' }
+        );
+
         // Send verification email
         const emailSent = await sendVerificationEmail(email, verificationCode);
 
-        if (!emailSent) {
-            return res.status(500).json({ 
-                error: 'Failed to send verification email' 
-            });
-        }
-
         res.status(201).json({
-            message: 'User registered. Verification code sent to email.',
-            email: email
+            success: true,
+            message: 'User registered successfully. Verification code sent to email.',
+            data: {
+                user: {
+                    id: user._id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    accountType: user.accountType,
+                    verified: user.isEmailVerified,
+                    createdAt: user.createdAt
+                },
+                tokens: {
+                    accessToken,
+                    refreshToken
+                }
+            }
         });
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ 
-            error: 'Internal server error' 
+            success: false,
+            message: 'Internal server error',
+            error: error.message 
         });
     }
 };
@@ -72,7 +115,9 @@ export const verifyEmail = async (req, res) => {
 
         if (!email || !verificationCode) {
             return res.status(400).json({ 
-                error: 'Email and verification code are required' 
+                success: false,
+                message: 'Email and verification code are required',
+                error: 'Missing fields'
             });
         }
 
@@ -80,25 +125,33 @@ export const verifyEmail = async (req, res) => {
 
         if (!user) {
             return res.status(404).json({ 
-                error: 'User not found' 
+                success: false,
+                message: 'User not found',
+                error: 'User not found'
             });
         }
 
         if (user.isEmailVerified) {
             return res.status(400).json({ 
-                error: 'Email already verified' 
+                success: false,
+                message: 'Email already verified',
+                error: 'Already verified'
             });
         }
 
         if (user.verificationCode !== verificationCode) {
             return res.status(400).json({ 
-                error: 'Invalid verification code' 
+                success: false,
+                message: 'Invalid verification code',
+                error: 'Invalid code'
             });
         }
 
         if (new Date() > user.verificationCodeExpiry) {
             return res.status(400).json({ 
-                error: 'Verification code has expired' 
+                success: false,
+                message: 'Verification code has expired',
+                error: 'Code expired'
             });
         }
 
@@ -107,13 +160,44 @@ export const verifyEmail = async (req, res) => {
         user.verificationCodeExpiry = null;
         await user.save();
 
-        res.json({ 
-            message: 'Email verified successfully' 
+        // Generate tokens after verification
+        const accessToken = jwt.sign(
+            { userId: user._id, email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '7d' }
+        );
+
+        const refreshToken = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
+            { expiresIn: '30d' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Email verified successfully',
+            data: {
+                user: {
+                    id: user._id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    accountType: user.accountType,
+                    verified: user.isEmailVerified,
+                    createdAt: user.createdAt
+                },
+                tokens: {
+                    accessToken,
+                    refreshToken
+                }
+            }
         });
     } catch (error) {
         console.error('Email verification error:', error);
         res.status(500).json({ 
-            error: 'Internal server error' 
+            success: false,
+            message: 'Internal server error',
+            error: error.message
         });
     }
 };
@@ -125,7 +209,9 @@ export const login = async (req, res) => {
 
         if (!email || !password) {
             return res.status(400).json({ 
-                error: 'Email and password are required' 
+                success: false,
+                message: 'Email and password are required',
+                error: 'Missing credentials'
             });
         }
 
@@ -133,13 +219,17 @@ export const login = async (req, res) => {
 
         if (!user) {
             return res.status(401).json({ 
-                error: 'Invalid email or password' 
+                success: false,
+                message: 'Invalid email or password',
+                error: 'Auth failed'
             });
         }
 
         if (!user.isEmailVerified) {
             return res.status(403).json({ 
-                error: 'Please verify your email first' 
+                success: false,
+                message: 'Please verify your email first',
+                error: 'Email not verified'
             });
         }
 
@@ -147,31 +237,50 @@ export const login = async (req, res) => {
 
         if (!isPasswordValid) {
             return res.status(401).json({ 
-                error: 'Invalid email or password' 
+                success: false,
+                message: 'Invalid email or password',
+                error: 'Auth failed'
             });
         }
 
-        // Generate JWT token
-        const token = jwt.sign(
+        // Generate JWT tokens
+        const accessToken = jwt.sign(
             { userId: user._id, email: user.email, role: user.role },
-            process.env.JWT_SECRET,
+            process.env.JWT_SECRET || 'your-secret-key',
             { expiresIn: '7d' }
         );
 
+        const refreshToken = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
+            { expiresIn: '30d' }
+        );
+
         res.json({
+            success: true,
             message: 'Login successful',
-            token,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role
+            data: {
+                user: {
+                    id: user._id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    accountType: user.accountType,
+                    verified: user.isEmailVerified,
+                    createdAt: user.createdAt
+                },
+                tokens: {
+                    accessToken,
+                    refreshToken
+                }
             }
         });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ 
-            error: 'Internal server error' 
+            success: false,
+            message: 'Internal server error',
+            error: error.message
         });
     }
 };
@@ -183,7 +292,9 @@ export const resendVerificationCode = async (req, res) => {
 
         if (!email) {
             return res.status(400).json({ 
-                error: 'Email is required' 
+                success: false,
+                message: 'Email is required',
+                error: 'Missing email'
             });
         }
 
@@ -191,13 +302,17 @@ export const resendVerificationCode = async (req, res) => {
 
         if (!user) {
             return res.status(404).json({ 
-                error: 'User not found' 
+                success: false,
+                message: 'User not found',
+                error: 'User not found'
             });
         }
 
         if (user.isEmailVerified) {
             return res.status(400).json({ 
-                error: 'Email already verified' 
+                success: false,
+                message: 'Email already verified',
+                error: 'Already verified'
             });
         }
 
@@ -212,17 +327,22 @@ export const resendVerificationCode = async (req, res) => {
 
         if (!emailSent) {
             return res.status(500).json({ 
-                error: 'Failed to send verification email' 
+                success: false,
+                message: 'Failed to send verification email',
+                error: 'Email send failed'
             });
         }
 
         res.json({ 
-            message: 'Verification code resent to email' 
+            success: true,
+            message: 'Verification code resent to email'
         });
     } catch (error) {
         console.error('Resend verification code error:', error);
         res.status(500).json({ 
-            error: 'Internal server error' 
+            success: false,
+            message: 'Internal server error',
+            error: error.message
         });
     }
 };

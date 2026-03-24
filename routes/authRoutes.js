@@ -3,7 +3,7 @@ import { register, verifyEmail, login, resendVerificationCode } from '../control
 
 const router = express.Router();
 
-router.post('/register', register);
+router.post('/signup', register);
 router.post('/verify-email', verifyEmail);
 router.post('/login', login);
 router.post('/resend-verification-code', resendVerificationCode);

@@ -2,7 +2,11 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
-    name: {
+    firstName: {
+        type: String,
+        required: true
+    },
+    lastName: {
         type: String,
         required: true
     },
@@ -15,6 +19,20 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true
+    },
+    phoneNumber: {
+        type: String,
+        required: true
+    },
+    accountType: {
+        type: String,
+        enum: ['individual', 'business', 'lawyer'],
+        default: 'individual',
+        required: true
+    },
+    businessName: {
+        type: String,
+        default: null
     },
     role: {
         type: String,
