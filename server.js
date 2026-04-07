@@ -24,7 +24,7 @@ connectDB();
 
 // Health check endpoint
 app.get('/', (req, res) => {
-    res.json({ message: 'Trademark Search API is running' });
+    res.json({ message: 'API is running' });
 });
 
 // Main API routes
@@ -42,7 +42,9 @@ app.use('/api/news', newsRoutes);
 app.use('/api/chat', chatRoutes);
 
 const PORT = process.env.PORT || 4000;
+const HOST = '0.0.0.0'; // Listen on all network interfaces
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+    console.log(`Server is running on http://0.0.0.0:${PORT}`);
+    console.log(`Accessible from: http://192.168.1.37:${PORT}`);
 });
