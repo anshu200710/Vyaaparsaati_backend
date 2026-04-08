@@ -9,6 +9,8 @@ import profileRoutes from './routes/profileRoutes.js';
 import offerRoutes from './routes/offerRoutes.js';
 import newsRoutes from './routes/newsRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import adminSubscriptionRoutes from './routes/adminSubscriptionRoutes.js';
 import { checkTrademark, getStats, getHealth } from './controllers/trademarkController.js';
 
 dotenv.config();
@@ -40,6 +42,8 @@ app.use('/api/trademarks', trademarkRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/admin/subscription', adminSubscriptionRoutes);
 
 const PORT = process.env.PORT || 4000;
 const HOST = '0.0.0.0'; // Listen on all network interfaces

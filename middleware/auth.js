@@ -22,6 +22,7 @@ export const verifyToken = (req, res, next) => {
 
 // Alias for verifyToken
 export const authenticate = verifyToken;
+export const protect = verifyToken;
 
 // Middleware to check if user is admin
 export const verifyAdmin = (req, res, next) => {

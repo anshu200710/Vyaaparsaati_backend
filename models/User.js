@@ -169,6 +169,35 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    // Subscription Related Fields
+    subscription: {
+        hasActiveSubscription: {
+            type: Boolean,
+            default: false
+        },
+        currentSubscriptionId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'UserSubscription',
+            default: null
+        },
+        subscriptionTier: {
+            type: String,
+            enum: ['free', 'monthly', 'yearly', null],
+            default: 'free'
+        },
+        subscriptionEndDate: {
+            type: Date,
+            default: null
+        },
+        trialEndsAt: {
+            type: Date,
+            default: null
+        },
+        trialUsed: {
+            type: Boolean,
+            default: false
+        }
+    },
     createdAt: {
         type: Date,
         default: Date.now
