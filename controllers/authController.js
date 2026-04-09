@@ -89,6 +89,7 @@ export const register = async (req, res) => {
                     lastName: user.lastName,
                     email: user.email,
                     accountType: user.accountType,
+                    role: user.role,
                     verified: user.isEmailVerified,
                     createdAt: user.createdAt
                 },
@@ -266,6 +267,7 @@ export const login = async (req, res) => {
                     lastName: user.lastName,
                     email: user.email,
                     accountType: user.accountType,
+                    role: user.role,
                     verified: user.isEmailVerified,
                     createdAt: user.createdAt
                 },
