@@ -87,6 +87,18 @@ router.patch(
 );
 
 /**
+ * Delete subscription plan
+ * DELETE /api/admin/subscription/:id
+ * Protected: Yes (Admin only)
+ */
+router.delete(
+  "/:id",
+  protect,
+  adminOnly,
+  subscriptionController.deleteSubscription
+);
+
+/**
  * Get subscription statistics
  * GET /api/admin/subscription-stats
  * Returns:

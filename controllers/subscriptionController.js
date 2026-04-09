@@ -540,3 +540,38 @@ export const toggleSubscriptionStatus = async (req, res) => {
     });
   }
 };
+
+/**
+ * Delete subscription plan
+ * DELETE /api/admin/subscription/:id
+ */
+export const deleteSubscription = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const subscription = await Subscription.findById(id);
+    if (!subscription) {
+      return res.status(404).json({
+        success: false,
+        message: "Subscription not found",
+      });
+    }
+
+    // Delete all user subscriptions associated with this plan
+    await UserSubscription.deleteMany({ subscriptionId: id });
+
+    // Delete the subscription plan
+    await Subscription.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Subscription plan deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting subscription",
+      error: error.message,
+    });
+  }
+};
