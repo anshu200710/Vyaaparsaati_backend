@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import PendingRegistration from '../models/PendingRegistration.js';
 import { generateVerificationCode, sendVerificationEmail } from '../utils/emailService.js';
 import jwt from 'jsonwebtoken';
 
@@ -32,7 +33,7 @@ export const register = async (req, res) => {
             });
         }
 
-        // Check if user exists
+        // Check if user already exists in main User collection
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ 
@@ -42,12 +43,22 @@ export const register = async (req, res) => {
             });
         }
 
+        // Check if there's already a pending registration
+        const existingPending = await PendingRegistration.findOne({ email });
+        if (existingPending) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'A verification code has already been sent. Please verify or try again later.',
+                error: 'Pending registration exists'
+            });
+        }
+
         // Generate verification code
         const verificationCode = generateVerificationCode();
         const verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-        // Create user
-        const user = new User({
+        // Save to PENDING collection (NOT in User collection yet)
+        const pendingUser = new PendingRegistration({
             firstName,
             lastName,
             email,
@@ -55,50 +66,32 @@ export const register = async (req, res) => {
             accountType,
             phoneNumber,
             businessName: accountType === 'business' ? businessName : undefined,
-            role: 'user',
-            isEmailVerified: false,
             verificationCode,
             verificationCodeExpiry
         });
 
-        await user.save();
-
-        // Generate JWT tokens
-        const accessToken = jwt.sign(
-            { userId: user._id, email: user.email, role: user.role },
-            process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '7d' }
-        );
-
-        const refreshToken = jwt.sign(
-            { userId: user._id },
-            process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
-            { expiresIn: '30d' }
-        );
+        await pendingUser.save();
 
         // Send verification email
         const emailSent = await sendVerificationEmail(email, verificationCode);
 
+        // Return response - user is in pending state
         res.status(201).json({
             success: true,
-            message: 'User registered successfully. Verification code sent to email.',
+            message: 'Registration initiated. Please verify your email to complete registration.',
             data: {
-                user: {
-                    id: user._id,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    email: user.email,
-                    accountType: user.accountType,
-                    role: user.role,
-                    verified: user.isEmailVerified,
-                    createdAt: user.createdAt
-                },
-                tokens: {
-                    accessToken,
-                    refreshToken
+                pendingUser: {
+                    id: pendingUser._id,
+                    firstName: pendingUser.firstName,
+                    lastName: pendingUser.lastName,
+                    email: pendingUser.email,
+                    accountType: pendingUser.accountType
                 }
-            }
+            },
+            requiresVerification: true
         });
+
+        return;
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ 
@@ -122,25 +115,34 @@ export const verifyEmail = async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ email });
+        // Trim the verification code to remove any whitespace
+        const trimmedCode = verificationCode.trim();
 
-        if (!user) {
+        // Look in PENDING collection (not User collection)
+        const pendingUser = await PendingRegistration.findOne({ email });
+
+        if (!pendingUser) {
             return res.status(404).json({ 
                 success: false,
-                message: 'User not found',
+                message: 'No pending registration found. Please sign up first.',
                 error: 'User not found'
             });
         }
 
-        if (user.isEmailVerified) {
+        // Check if already verified (shouldn't happen but check anyway)
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            // Clean up pending and return error
+            await PendingRegistration.deleteOne({ email });
             return res.status(400).json({ 
                 success: false,
-                message: 'Email already verified',
+                message: 'Email already verified. Please login.',
                 error: 'Already verified'
             });
         }
 
-        if (user.verificationCode !== verificationCode) {
+        // Check verification code
+        if (pendingUser.verificationCode !== trimmedCode && pendingUser.verificationCode !== verificationCode) {
             return res.status(400).json({ 
                 success: false,
                 message: 'Invalid verification code',
@@ -148,20 +150,39 @@ export const verifyEmail = async (req, res) => {
             });
         }
 
-        if (new Date() > user.verificationCodeExpiry) {
+        // Check expiry
+        if (new Date() > pendingUser.verificationCodeExpiry) {
+            // Delete expired pending registration
+            await PendingRegistration.deleteOne({ email });
             return res.status(400).json({ 
                 success: false,
-                message: 'Verification code has expired',
+                message: 'Verification code has expired. Please sign up again.',
                 error: 'Code expired'
             });
         }
 
-        user.isEmailVerified = true;
-        user.verificationCode = null;
-        user.verificationCodeExpiry = null;
+        // Create the actual user in User collection
+        const user = new User({
+            firstName: pendingUser.firstName,
+            lastName: pendingUser.lastName,
+            email: pendingUser.email,
+            password: pendingUser.password, // Will be hashed by pre-save hook
+            accountType: pendingUser.accountType,
+            phoneNumber: pendingUser.phoneNumber,
+            businessName: pendingUser.businessName,
+            role: 'user',
+            isEmailVerified: true,
+            isActive: true,
+            verificationCode: null,
+            verificationCodeExpiry: null
+        });
+
         await user.save();
 
-        // Generate tokens after verification
+        // Delete from pending collection
+        await PendingRegistration.deleteOne({ email });
+
+        // Generate tokens
         const accessToken = jwt.sign(
             { userId: user._id, email: user.email, role: user.role },
             process.env.JWT_SECRET || 'your-secret-key',
@@ -176,7 +197,7 @@ export const verifyEmail = async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Email verified successfully',
+            message: 'Email verified successfully. Your account has been created!',
             data: {
                 user: {
                     id: user._id,
@@ -231,6 +252,14 @@ export const login = async (req, res) => {
                 success: false,
                 message: 'Please verify your email first',
                 error: 'Email not verified'
+            });
+        }
+
+        if (!user.isActive) {
+            return res.status(403).json({ 
+                success: false,
+                message: 'Your account is not active. Please verify your email.',
+                error: 'Account not active'
             });
         }
 
@@ -300,30 +329,33 @@ export const resendVerificationCode = async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ email });
+        // Check in PENDING collection (not User collection)
+        const pendingUser = await PendingRegistration.findOne({ email });
 
-        if (!user) {
+        if (!pendingUser) {
+            // Check if already in User collection (verified)
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({ 
+                    success: false,
+                    message: 'Email already verified. Please login.',
+                    error: 'Already verified'
+                });
+            }
             return res.status(404).json({ 
                 success: false,
-                message: 'User not found',
+                message: 'No pending registration found. Please sign up first.',
                 error: 'User not found'
             });
         }
 
-        if (user.isEmailVerified) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'Email already verified',
-                error: 'Already verified'
-            });
-        }
-
+        // Generate new verification code
         const verificationCode = generateVerificationCode();
         const verificationCodeExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-        user.verificationCode = verificationCode;
-        user.verificationCodeExpiry = verificationCodeExpiry;
-        await user.save();
+        pendingUser.verificationCode = verificationCode;
+        pendingUser.verificationCodeExpiry = verificationCodeExpiry;
+        await pendingUser.save();
 
         const emailSent = await sendVerificationEmail(email, verificationCode);
 

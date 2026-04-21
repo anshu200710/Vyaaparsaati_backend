@@ -43,6 +43,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isActive: {
+        type: Boolean,
+        default: false // User must verify email to become active
+    },
     verificationCode: {
         type: String,
         default: null
