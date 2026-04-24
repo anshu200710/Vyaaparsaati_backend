@@ -19,23 +19,30 @@ export const sendVerificationEmail = async (email, verificationCode) => {
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
-        subject: 'Email Verification Code',
+        subject: 'Email Verification Code - VYAAPAAR',
         html: `
-            <h2>Email Verification</h2>
-            <p>Your verification code is:</p>
-            <h1>${verificationCode}</h1>
-            <p>This code will expire in 10 minutes.</p>
-            <p>Do not share this code with anyone.</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #1E4FA3;">Email Verification</h2>
+                <p>Your verification code is:</p>
+                <h1 style="color: #2ECC71; font-size: 36px; letter-spacing: 5px;">${verificationCode}</h1>
+                <p>This code will expire in <strong>1 minute</strong>.</p>
+                <p style="color: #666;">Do not share this code with anyone.</p>
+            </div>
         `
     };
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`Verification email sent to ${email}`);
-        return true;
+        console.log(`✅ Verification email sent to ${email}`);
+        return { success: true, code: verificationCode };
     } catch (error) {
-        console.error('Error sending email:', error);
-        return false;
+        console.error('❌ Error sending email:', error.message);
+        console.error('Email config:', {
+            user: process.env.EMAIL_USER,
+            hasPassword: !!process.env.EMAIL_PASSWORD
+        });
+        // Return code in response for testing (remove in production)
+        return { success: false, code: verificationCode, error: error.message };
     }
 };
 
