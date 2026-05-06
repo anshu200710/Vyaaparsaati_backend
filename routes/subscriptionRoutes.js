@@ -10,9 +10,16 @@ const router = express.Router();
 
 /**
  * Get all available subscription plans
- * GET /api/subscriptions
+ * GET /api/subscription
  */
 router.get("/", subscriptionController.getAllSubscriptions);
+
+/**
+ * Get user's current subscription status
+ * GET /api/subscription/status
+ * Protected: Yes (requires user to be logged in)
+ */
+router.get("/status", protect, subscriptionController.getUserSubscriptionStatus);
 
 /**
  * Get specific subscription by ID
@@ -23,13 +30,6 @@ router.get("/:id", subscriptionController.getSubscriptionById);
 // ═══════════════════════════════════════════════════════════════════════════
 // PROTECTED ROUTES - Authentication required
 // ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Get user's current subscription status
- * GET /api/subscription/status
- * Protected: Yes (requires user to be logged in)
- */
-router.get("/status", protect, subscriptionController.getUserSubscriptionStatus);
 
 /**
  * Initiate subscription purchase (creates Razorpay order)

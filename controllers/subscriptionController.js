@@ -16,13 +16,6 @@ export const getAllSubscriptions = async (req, res) => {
       displayOrder: 1,
     });
 
-    if (!subscriptions.length) {
-      return res.status(404).json({
-        success: false,
-        message: "No subscriptions found",
-      });
-    }
-
     res.status(200).json({
       success: true,
       count: subscriptions.length,
@@ -347,10 +340,12 @@ export const createSubscription = async (req, res) => {
       features,
       benefits,
       badge,
+      displayOrder,
+      isActive,
     } = req.body;
 
     // Validate required fields
-    if (!name || !price || !interval || !durationInDays) {
+    if (!name || price == null || !interval || durationInDays == null) {
       return res.status(400).json({
         success: false,
         message: "Name, price, interval, and durationInDays are required",
@@ -372,9 +367,11 @@ export const createSubscription = async (req, res) => {
       interval,
       durationInDays,
       description,
-      features: features || [],
-      benefits: benefits || [],
+      features: Array.isArray(features) ? features : [],
+      benefits: Array.isArray(benefits) ? benefits : [],
       badge,
+      displayOrder: typeof displayOrder === "number" ? displayOrder : undefined,
+      isActive: typeof isActive === "boolean" ? isActive : undefined,
     });
 
     await subscription.save();
@@ -385,6 +382,14 @@ export const createSubscription = async (req, res) => {
       data: subscription,
     });
   } catch (error) {
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid subscription data",
+        error: error.message,
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: "Error creating subscription",

@@ -4,7 +4,6 @@ const subscriptionSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      enum: ["Monthly", "Yearly"],
       required: true,
       unique: true,
     },
